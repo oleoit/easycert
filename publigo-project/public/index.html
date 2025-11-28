@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,7 +18,7 @@
           <h1 class="app-title" id="t-app-title">EasyCert by Portalnet</h1>
           <p class="app-subtitle" id="t-app-subtitle">เกียรติบัตรออนไลน์</p>
         </div>
-        
+
         <div class="lang-switch">
           <button class="lang-btn active" onclick="setLanguage('th')" id="btn-th">TH</button>
           <button class="lang-btn" onclick="setLanguage('en')" id="btn-en">EN</button>
@@ -78,7 +79,8 @@
       </form>
 
       <div class="footer-tip">
-        <strong id="t-tip-label">Tip:</strong> <span id="t-tip-text">Column แรกของ CSV จะถูกใช้เป็นชื่อไฟล์เสมอ (เช่น 01_Somchai)</span>
+        <strong id="t-tip-label">Tip:</strong> <span id="t-tip-text">Column แรกของ CSV จะถูกใช้เป็นชื่อไฟล์เสมอ (เช่น
+          01_Somchai)</span>
       </div>
     </div>
 
@@ -87,7 +89,7 @@
         <h2 class="result-title" id="t-result-title">📄 ผลลัพธ์</h2>
         <div id="downloadAllContainer"></div>
       </div>
-      
+
       <div id="resultContent" class="result-content-area">
         <div class="empty-state">
           <div class="empty-icon">⚡</div>
@@ -135,7 +137,13 @@
         generated: "สร้างไฟล์สำเร็จ",
         files: "ไฟล์",
         progressStart: "กำลังเริ่มต้น...",
-        progressWork: "กำลังสร้างเอกสาร..."
+        progressWork: "กำลังสร้างเอกสาร...",
+        // Error Messages
+        ERR_MISSING_FILES: "กรุณาอัปโหลดไฟล์ให้ครบทั้ง Template และ CSV",
+        ERR_INVALID_TEMPLATE: "ไฟล์ Template ต้องเป็น .docx หรือ .pptx เท่านั้น",
+        ERR_TEMPLATE_MISMATCH: "ประเภท Template ไม่ตรงกับ Output (เช่น Template เป็น PPT แต่เลือก Output เป็น Word)",
+        ERR_CSV_EMPTY: "ไฟล์ CSV ไม่มีข้อมูล หรือรูปแบบไม่ถูกต้อง",
+        ERR_UNKNOWN: "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ"
       },
       en: {
         appTitle: "EasyCert by Portalnet",
@@ -159,40 +167,77 @@
         generated: "Generated",
         files: "files",
         progressStart: "Starting...",
-        progressWork: "Generating documents..."
+        progressWork: "Generating documents...",
+        // Error Messages
+        ERR_MISSING_FILES: "Please upload both Template and CSV files.",
+        ERR_INVALID_TEMPLATE: "Template must be .docx or .pptx file.",
+        ERR_TEMPLATE_MISMATCH: "Template type does not match Output (e.g., using PPT template for Word output).",
+        ERR_CSV_EMPTY: "CSV file is empty or invalid.",
+        ERR_UNKNOWN: "An unknown error occurred."
       }
     };
 
-    let currentLang = 'th'; // Default language
+    let currentLang = 'th';
+    let currentErrorKey = null;
+
+    // --- Helper: เปลี่ยนข้อความแบบปลอดภัย (ถ้าหาไม่เจอ ไม่ต้อง Error) ---
+    function setTextSafe(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
 
     function setLanguage(lang) {
       currentLang = lang;
       const t = translations[lang];
 
-      // Update Text Content
-      document.getElementById('t-app-title').textContent = t.appTitle;
-      document.getElementById('t-app-subtitle').textContent = t.appSubtitle;
-      document.getElementById('t-step1').textContent = t.step1;
-      document.getElementById('t-drag-template').textContent = t.dragTemplate;
-      document.getElementById('t-hint1').textContent = t.hint1;
-      document.getElementById('t-step2').textContent = t.step2;
-      document.getElementById('t-drag-csv').textContent = t.dragCsv;
-      document.getElementById('t-hint2').textContent = t.hint2;
-      document.getElementById('t-step3').textContent = t.step3;
-      document.getElementById('submitBtn').textContent = submitBtn.disabled ? t.btnProcessing : t.btnGenerate;
-      document.getElementById('t-tip-label').textContent = t.tipLabel;
-      document.getElementById('t-tip-text').textContent = t.tipText;
-      document.getElementById('t-result-title').textContent = t.resultTitle;
-      document.getElementById('t-result-empty').textContent = t.resultEmpty;
-      document.getElementById('t-error-title').textContent = t.errorTitle;
-      document.getElementById('t-error-close').textContent = t.btnClose;
+      // ใช้ setTextSafe แทน getElementById โดยตรง
+      setTextSafe('t-app-title', t.appTitle);
+      setTextSafe('t-app-subtitle', t.appSubtitle);
+      setTextSafe('t-step1', t.step1);
+      setTextSafe('t-drag-template', t.dragTemplate);
+      setTextSafe('t-hint1', t.hint1);
+      setTextSafe('t-step2', t.step2);
+      setTextSafe('t-drag-csv', t.dragCsv);
+      setTextSafe('t-hint2', t.hint2);
+      setTextSafe('t-step3', t.step3);
 
-      // Update Buttons State
+      const btn = document.getElementById('submitBtn');
+      if (btn) btn.textContent = btn.disabled ? t.btnProcessing : t.btnGenerate;
+
+      setTextSafe('t-tip-label', t.tipLabel);
+      setTextSafe('t-tip-text', t.tipText);
+      setTextSafe('t-result-title', t.resultTitle);
+      setTextSafe('t-result-empty', t.resultEmpty);
+      setTextSafe('t-error-title', t.errorTitle);
+      setTextSafe('t-error-close', t.btnClose);
+
+      // อัปเดต Error ใน Modal (ถ้าเปิดอยู่)
+      if (currentErrorKey) {
+        setTextSafe("errorMessage", t[currentErrorKey] || currentErrorKey);
+      }
+
+      // เปลี่ยนสีปุ่ม (บรรทัดนี้แหละที่เคยทำงานไม่ถึง)
       document.getElementById('btn-th').classList.toggle('active', lang === 'th');
       document.getElementById('btn-en').classList.toggle('active', lang === 'en');
     }
 
-    /* --- Logic เดิมทั้งหมด --- */
+    function openError(keyOrMessage) {
+      currentErrorKey = keyOrMessage;
+      const t = translations[currentLang];
+      const msg = t[keyOrMessage] || keyOrMessage;
+
+      setTextSafe('t-error-title', t.errorTitle); // อัปเดตหัวข้อให้เป็นภาษาปัจจุบัน
+      setTextSafe('errorMessage', msg);
+
+      document.getElementById("errorOverlay").classList.add("visible");
+    }
+
+    function closeError() {
+      document.getElementById("errorOverlay").classList.remove("visible");
+      currentErrorKey = null;
+    }
+
+    /* --- Logic เดิม --- */
     function setupDragDrop(zoneId, inputId, contentId, successId, nameId) {
       const zone = document.getElementById(zoneId);
       const input = document.getElementById(inputId);
@@ -201,12 +246,12 @@
       const nameLabel = document.getElementById(nameId);
 
       zone.addEventListener('click', () => input.click());
-      input.addEventListener('change', () => { if(input.files.length) updateUI(input.files[0]); });
+      input.addEventListener('change', () => { if (input.files.length) updateUI(input.files[0]); });
       zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
       zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
       zone.addEventListener('drop', (e) => {
         e.preventDefault(); zone.classList.remove('dragover');
-        if(e.dataTransfer.files.length) { input.files = e.dataTransfer.files; updateUI(e.dataTransfer.files[0]); }
+        if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; updateUI(e.dataTransfer.files[0]); }
       });
       function updateUI(file) {
         content.style.display = 'none'; success.style.display = 'flex';
@@ -231,24 +276,17 @@
     const downloadAllContainer = document.getElementById("downloadAllContainer");
     let progressInterval = null;
 
-    function openError(msg) {
-      document.getElementById("errorMessage").textContent = msg;
-      document.getElementById("errorOverlay").classList.add("visible");
-    }
-    function closeError() {
-      document.getElementById("errorOverlay").classList.remove("visible");
-    }
     function updateProgressBar(percent) {
-        const fill = document.getElementById('progressFill');
-        const text = document.getElementById('progressText');
-        if(fill && text) {
-            const t = translations[currentLang];
-            fill.style.width = percent + '%';
-            text.textContent = `${t.progressWork} ${percent}%`;
-        }
+      const fill = document.getElementById('progressFill');
+      const text = document.getElementById('progressText');
+      if (fill && text) {
+        const t = translations[currentLang];
+        fill.style.width = percent + '%';
+        text.textContent = `${t.progressWork} ${percent}%`;
+      }
     }
 
-    window.markAsDownloaded = function(btn) {
+    window.markAsDownloaded = function (btn) {
       btn.classList.add('downloaded');
       btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     }
@@ -269,35 +307,35 @@
         </div>
       `;
       let percent = 0; updateProgressBar(0);
-      if(progressInterval) clearInterval(progressInterval);
+      if (progressInterval) clearInterval(progressInterval);
       progressInterval = setInterval(() => {
-          if (percent < 60) percent += Math.floor(Math.random() * 5) + 1;
-          else if (percent < 90) percent += 1;
-          if (percent > 90) percent = 90; 
-          updateProgressBar(percent);
+        if (percent < 60) percent += Math.floor(Math.random() * 5) + 1;
+        else if (percent < 90) percent += 1;
+        if (percent > 90) percent = 90;
+        updateProgressBar(percent);
       }, 300);
     }
 
     function showResults(label, files, zipBase64) {
-      if(progressInterval) clearInterval(progressInterval);
+      if (progressInterval) clearInterval(progressInterval);
       updateProgressBar(100);
 
       setTimeout(() => {
-          const t = translations[currentLang];
-          downloadAllContainer.innerHTML = `
+        const t = translations[currentLang];
+        downloadAllContainer.innerHTML = `
             <a href="data:application/zip;base64,${zipBase64}" download="all-files.zip" class="btn-download-all-header">
               ${t.downloadAll}
             </a>
           `;
 
-          let listHtml = `<div class="result-summary">${t.generated} ${files.length} ${t.files} (${label})</div>`;
-          listHtml += `<div class="file-list">`;
-          
-          files.forEach(f => {
-            const fileIconHtml = getFileIcon(f.filename);
-            const downloadIconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+        let listHtml = `<div class="result-summary">${t.generated} ${files.length} ${t.files} (${label})</div>`;
+        listHtml += `<div class="file-list">`;
 
-            listHtml += `
+        files.forEach(f => {
+          const fileIconHtml = getFileIcon(f.filename);
+          const downloadIconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+
+          listHtml += `
               <div class="file-item">
                 <div class="file-info">
                   ${fileIconHtml}
@@ -309,9 +347,9 @@
                 </a>
               </div>
             `;
-          });
-          listHtml += `</div>`;
-          resultContent.innerHTML = listHtml;
+        });
+        listHtml += `</div>`;
+        resultContent.innerHTML = listHtml;
       }, 500);
     }
 
@@ -319,24 +357,33 @@
       e.preventDefault();
       if (!form.reportValidity()) return;
       const t = translations[currentLang];
-      
-      submitBtn.disabled = true; 
-      submitBtn.textContent = t.btnProcessing; 
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = t.btnProcessing;
       showLoading();
 
       try {
         const fd = new FormData(form);
         const res = await fetch("/merge", { method: "POST", body: fd });
         const data = await res.json().catch(() => null);
-        if (!res.ok || !data || !data.success) throw new Error(data?.message || "Unknown Error");
+        if (!res.ok || !data || !data.success) throw new Error(data?.message || "ERR_UNKNOWN");
         showResults(data.label, data.files, data.zipBase64);
       } catch (err) {
-        if(progressInterval) clearInterval(progressInterval);
-        resultContent.innerHTML = `<div class="empty-state"><div class="empty-icon" style="color:red">!</div><p>${err.message}</p></div>`;
-        openError(err.message);
+        if (progressInterval) clearInterval(progressInterval);
+
+        /* --- 🔥 แก้ไขตรงนี้: ให้กลับเป็นสถานะปกติ (สายฟ้า) แทนไอคอน Error --- */
+        resultContent.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚡</div>
+            <p id="t-result-empty">${t.resultEmpty}</p>
+          </div>
+        `;
+        /* ------------------------------------------------------------- */
+
+        openError(err.message); // ยังคงแสดง Popup Error เหมือนเดิม
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = t.btnGenerate; // Reset text using current lang
+        submitBtn.textContent = t.btnGenerate;
       }
     });
 
@@ -344,4 +391,5 @@
     setLanguage('th');
   </script>
 </body>
+
 </html>

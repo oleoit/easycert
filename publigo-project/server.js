@@ -1,6 +1,4 @@
-// server.js – Publigo Lite (Full Manual Implementation)
-// Features: Manual PDF.js, Naming (01_Name), Image Support
-
+/* server.js - Updated with Error Codes */
 const express = require("express");
 const multer = require("multer");
 const PizZip = require("pizzip");
@@ -13,14 +11,10 @@ const path = require("path");
 const { exec } = require("child_process");
 const { PassThrough } = require("stream");
 
-// --- 1. Load Canvas & PDF.js (Legacy Version) ---
 const canvas = require("canvas");
 const assert = require("assert");
-// ใช้ Legacy build เพื่อความเสถียรใน Node.js
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
-// --- 2. NodeCanvasFactory Class ---
-// โรงงานผลิต Canvas ให้ PDF.js
 class NodeCanvasFactory {
   create(width, height) {
     assert(width > 0 && height > 0, "Invalid canvas size");
@@ -43,7 +37,6 @@ class NodeCanvasFactory {
   }
 }
 
-// --- 3. Function Convert PDF to Images ---
 async function convertPdfToImages(pdfBuffer, format = "png") {
   const uint8Array = new Uint8Array(pdfBuffer);
   const loadingTask = pdfjsLib.getDocument({
@@ -59,7 +52,7 @@ async function convertPdfToImages(pdfBuffer, format = "png") {
 
   for (let i = 1; i <= pageCount; i++) {
     const page = await pdfDocument.getPage(i);
-    const viewport = page.getViewport({ scale: 2.0 }); // Scale 2.0 = ชัดขึ้น
+    const viewport = page.getViewport({ scale: 2.0 });
     const canvasFactory = new NodeCanvasFactory();
     const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
     const renderContext = {
@@ -67,9 +60,7 @@ async function convertPdfToImages(pdfBuffer, format = "png") {
       viewport: viewport,
       canvasFactory: canvasFactory,
     };
-
     await page.render(renderContext).promise;
-
     let imgBuffer;
     if (format === "jpg" || format === "jpeg") {
       imgBuffer = canvasAndContext.canvas.toBuffer("image/jpeg", { quality: 0.9 });
@@ -87,10 +78,8 @@ const port = 3000;
 
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
-
 const upload = multer({ storage: multer.memoryStorage() });
 
-/* --- Helper: Find LibreOffice --- */
 function findSoffice() {
   const candidates = [
     "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
@@ -103,7 +92,6 @@ function findSoffice() {
   }
   return null;
 }
-
 let sofficePath = process.env.SOFFICE_PATH && fs.existsSync(process.env.SOFFICE_PATH) 
   ? `"${process.env.SOFFICE_PATH}"` 
   : findSoffice();
@@ -112,20 +100,16 @@ if (!sofficePath) {
   console.error("✘ ไม่พบ LibreOffice");
   process.exit(1);
 }
-// คืนชีพ log บรรทัดนี้ให้แล้วครับ!
 console.log("✔ ใช้ LibreOffice ที่:", sofficePath);
 
-/* --- Convert Buffer -> PDF --- */
 function convertToPdf(inputBuffer, ext) {
   return new Promise((resolve, reject) => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "lo-"));
     const inputName = "input." + ext;
     const inputPath = path.join(tempDir, inputName);
     const outputPath = path.join(tempDir, "input.pdf");
-
     fs.writeFileSync(inputPath, inputBuffer);
     const cmd = `${sofficePath} --headless --convert-to pdf --outdir "${tempDir}" "${inputPath}"`;
-
     exec(cmd, (error) => {
       if (error) return reject(new Error("LibreOffice error"));
       try {
@@ -140,7 +124,6 @@ function convertToPdf(inputBuffer, ext) {
   });
 }
 
-/* --- Create ZIP --- */
 function createZipBuffer(files) {
   return new Promise((resolve, reject) => {
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -155,55 +138,56 @@ function createZipBuffer(files) {
   });
 }
 
-/* --- Route /merge --- */
 app.post("/merge", upload.fields([{ name: "template" }, { name: "datafile" }]), async (req, res) => {
   try {
+    // Check Missing Files
     if (!req.files.template || !req.files.datafile) {
-      return res.status(400).json({ success: false, message: "กรุณาอัปโหลดไฟล์ให้ครบ" });
+      return res.status(400).json({ success: false, message: "ERR_MISSING_FILES" });
     }
 
     const templateFile = req.files.template[0];
     const dataFile = req.files.datafile[0];
     const templateExt = templateFile.originalname.split(".").pop().toLowerCase();
     
+    // Check Valid Template
+    if (!["docx", "pptx"].includes(templateExt)) {
+        return res.status(400).json({ success: false, message: "ERR_INVALID_TEMPLATE" });
+    }
+
     let outputType = (req.body.outputType || "pdf").toLowerCase();
     const allowedTypes = ["pdf", "docx", "pptx", "png", "jpg"];
     if (!allowedTypes.includes(outputType)) outputType = "pdf";
 
+    // Check Template Mismatch
     if ((outputType === "docx" && templateExt !== "docx") || 
         (outputType === "pptx" && templateExt !== "pptx")) {
-      return res.status(400).json({ success: false, message: "ประเภท Template ไม่ตรงกับ Output" });
+      return res.status(400).json({ success: false, message: "ERR_TEMPLATE_MISMATCH" });
     }
 
     const records = parse(dataFile.buffer.toString("utf-8"), { columns: true, skip_empty_lines: true, trim: true });
-    if (records.length === 0) return res.status(400).json({ success: false, message: "CSV ว่างเปล่า" });
+    
+    // Check Empty CSV
+    if (records.length === 0) return res.status(400).json({ success: false, message: "ERR_CSV_EMPTY" });
 
     const outFiles = [];
-
     for (let i = 0; i < records.length; i++) {
       const row = records[i];
       const zip = new PizZip(templateFile.buffer);
       const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, delimiters: { start: "{{", end: "}}" } });
-
       try { doc.render(row); } catch (error) { continue; }
       
       const filledBuffer = doc.getZip().generate({ type: "nodebuffer" });
-
-      // --- Logic ตั้งชื่อไฟล์ 01_Name ---
       const firstHeaderKey = Object.keys(row)[0]; 
       const firstColValue = row[firstHeaderKey] ? row[firstHeaderKey].toString().trim() : "NoName";
       const indexStr = (i + 1).toString().padStart(2, '0');
       const safeName = firstColValue.replace(/[^a-zA-Z0-9ก-๙\s-]/g, "");
       const baseName = `${indexStr}_${safeName}`;
-      // --------------------------------
 
       if (outputType === "pdf") {
         const pdfBuf = await convertToPdf(filledBuffer, templateExt);
         outFiles.push({ filename: `${baseName}.pdf`, buffer: pdfBuf, ext: "pdf" });
-
       } else if (outputType === "docx" || outputType === "pptx") {
         outFiles.push({ filename: `${baseName}.${outputType}`, buffer: filledBuffer, ext: outputType });
-
       } else if (outputType === "png" || outputType === "jpg") {
         const pdfBuf = await convertToPdf(filledBuffer, templateExt);
         try {
@@ -219,7 +203,6 @@ app.post("/merge", upload.fields([{ name: "template" }, { name: "datafile" }]), 
     }
 
     const zipBuffer = await createZipBuffer(outFiles);
-    
     const filesJson = outFiles.map((f) => ({
       filename: f.filename,
       mime: f.ext === "pdf" ? "application/pdf" : 
