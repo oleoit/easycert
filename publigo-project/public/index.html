@@ -15,8 +15,8 @@
       <div class="card-header">
         <div class="logo-badge">E</div>
         <div>
-          <h1 class="app-title" id="t-app-title">EasyCert by Portalnet</h1>
-          <p class="app-subtitle" id="t-app-subtitle">เกียรติบัตรออนไลน์</p>
+          <h1 class="app-title" id="t-app-title">EasyCert by Yutthana</h1>
+          <p class="app-subtitle" id="t-app-subtitle">เกียรติบัตรออนไลน์ โดย ยุทธนา</p>
         </div>
 
         <div class="lang-switch">
@@ -97,6 +97,9 @@
         </div>
       </div>
     </div>
+  <div class="app-footer">
+      <span id="t-footer">Developed by Yutthana P. © 2025</span>
+    </div>
   </div>
 
   <div class="overlay" id="errorOverlay">
@@ -116,7 +119,7 @@
     /* --- Dictionary ภาษา --- */
     const translations = {
       th: {
-        appTitle: "EasyCert by Portalnet",
+        appTitle: "EasyCert",
         appSubtitle: "เกียรติบัตรออนไลน์",
         step1: "1) เลือก Template (.docx / .pptx)",
         dragTemplate: "ลากไฟล์ Template หรือคลิก",
@@ -143,10 +146,11 @@
         ERR_INVALID_TEMPLATE: "ไฟล์ Template ต้องเป็น .docx หรือ .pptx เท่านั้น",
         ERR_TEMPLATE_MISMATCH: "ประเภท Template ไม่ตรงกับ Output (เช่น Template เป็น PPT แต่เลือก Output เป็น Word)",
         ERR_CSV_EMPTY: "ไฟล์ CSV ไม่มีข้อมูล หรือรูปแบบไม่ถูกต้อง",
-        ERR_UNKNOWN: "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ"
+        ERR_UNKNOWN: "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+        footer: "พัฒนาโดย Yutthana P. © 2025" 
       },
       en: {
-        appTitle: "EasyCert by Portalnet",
+        appTitle: "EasyCert",
         appSubtitle: "Online Certificate Generator",
         step1: "1) Upload Template (.docx / .pptx)",
         dragTemplate: "Drag & Drop Template or Click",
@@ -173,7 +177,8 @@
         ERR_INVALID_TEMPLATE: "Template must be .docx or .pptx file.",
         ERR_TEMPLATE_MISMATCH: "Template type does not match Output (e.g., using PPT template for Word output).",
         ERR_CSV_EMPTY: "CSV file is empty or invalid.",
-        ERR_UNKNOWN: "An unknown error occurred."
+        ERR_UNKNOWN: "An unknown error occurred.",
+        footer: "Developed by Yutthana P. © 2025" 
       }
     };
 
@@ -215,6 +220,9 @@
       if (currentErrorKey) {
         setTextSafe("errorMessage", t[currentErrorKey] || currentErrorKey);
       }
+
+      //Footer
+      setTextSafe('t-footer', t.footer);
 
       // เปลี่ยนสีปุ่ม (บรรทัดนี้แหละที่เคยทำงานไม่ถึง)
       document.getElementById('btn-th').classList.toggle('active', lang === 'th');

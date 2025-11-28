@@ -445,3 +445,13 @@ button:disabled {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   font-weight: 600;
 }
+
+/* --- Footer Credit --- */
+.app-footer {
+  grid-column: 1 / -1; /* สั่งให้กินพื้นที่ซ้าย-ขวาเต็มแถว */
+  text-align: center;
+  margin-top: 10px;
+  color: #94a3b8;      /* สีเทาจางๆ ดูแพง */
+  font-size: 13px;
+  font-weight: 400;
+}
