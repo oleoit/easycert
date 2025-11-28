@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyCert by Portalnet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="shell">
+    <div class="card input-card">
+      <div class="card-header">
+        <div class="logo-badge">E</div>
+        <div>
+          <h1 class="app-title" id="t-app-title">EasyCert by Portalnet</h1>
+          <p class="app-subtitle" id="t-app-subtitle">เกียรติบัตรออนไลน์</p>
+        </div>
+        
+        <div class="lang-switch">
+          <button class="lang-btn active" onclick="setLanguage('th')" id="btn-th">TH</button>
+          <button class="lang-btn" onclick="setLanguage('en')" id="btn-en">EN</button>
+        </div>
+      </div>
+
+      <form id="mergeForm" enctype="multipart/form-data">
+        <div class="step-group">
+          <label class="step-label" id="t-step1">1) เลือก Template (.docx / .pptx)</label>
+          <div class="drop-zone" id="dropZoneTemplate">
+            <input type="file" name="template" id="fileTemplate" accept=".docx,.pptx" required hidden />
+            <div class="drop-content" id="contentTemplate">
+              <span class="icon-upload">☁️</span>
+              <span class="text-upload" id="t-drag-template">ลากไฟล์ Template หรือคลิก</span>
+              <span class="subtext-upload">(.docx / .pptx)</span>
+            </div>
+            <div class="file-success" id="successTemplate">
+              <span class="file-icon">📄</span>
+              <span class="filename" id="nameTemplate"></span>
+              <span class="check-icon">✓</span>
+            </div>
+          </div>
+          <p class="step-hint" id="t-hint1">ใช้ {{Tag}} ในไฟล์ template ให้ตรงกับชื่อ column ใน CSV</p>
+        </div>
+
+        <div class="step-group">
+          <label class="step-label" id="t-step2">2) เลือกไฟล์ข้อมูล (.csv)</label>
+          <div class="drop-zone" id="dropZoneCsv">
+            <input type="file" name="datafile" id="fileCsv" accept=".csv" required hidden />
+            <div class="drop-content" id="contentCsv">
+              <span class="icon-upload">📊</span>
+              <span class="text-upload" id="t-drag-csv">ลากไฟล์ CSV หรือคลิก</span>
+              <span class="subtext-upload">(.csv)</span>
+            </div>
+            <div class="file-success" id="successCsv">
+              <span class="file-icon">📄</span>
+              <span class="filename" id="nameCsv"></span>
+              <span class="check-icon">✓</span>
+            </div>
+          </div>
+          <p class="step-hint" id="t-hint2">ต้องมี header แถวแรก เช่น Name, Date</p>
+        </div>
+
+        <div class="step-group">
+          <label class="step-label" id="t-step3">3) เลือกประเภท Output</label>
+          <div class="select-wrapper">
+            <select name="outputType" required>
+              <option value="pdf" selected>PDF (.pdf)</option>
+              <option value="png">Image (.png)</option>
+              <option value="jpg">Image (.jpg)</option>
+              <option value="docx">Word (.docx)</option>
+              <option value="pptx">PowerPoint (.pptx)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn">⚡ Generate documents</button>
+      </form>
+
+      <div class="footer-tip">
+        <strong id="t-tip-label">Tip:</strong> <span id="t-tip-text">Column แรกของ CSV จะถูกใช้เป็นชื่อไฟล์เสมอ (เช่น 01_Somchai)</span>
+      </div>
+    </div>
+
+    <div class="card result-card">
+      <div class="result-header">
+        <h2 class="result-title" id="t-result-title">📄 ผลลัพธ์</h2>
+        <div id="downloadAllContainer"></div>
+      </div>
+      
+      <div id="resultContent" class="result-content-area">
+        <div class="empty-state">
+          <div class="empty-icon">⚡</div>
+          <p id="t-result-empty">ผลลัพธ์จะแสดงที่นี่หลังจาก Generate</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="errorOverlay">
+    <div class="dialog">
+      <div class="dialog-header">
+        <div class="dialog-icon-error">!</div>
+        <h3 id="t-error-title">เกิดข้อผิดพลาด</h3>
+      </div>
+      <div class="dialog-body" id="errorMessage"></div>
+      <div class="dialog-footer">
+        <button onclick="closeError()" id="t-error-close">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* --- Dictionary ภาษา --- */
+    const translations = {
+      th: {
+        appTitle: "EasyCert by Portalnet",
+        appSubtitle: "เกียรติบัตรออนไลน์",
+        step1: "1) เลือก Template (.docx / .pptx)",
+        dragTemplate: "ลากไฟล์ Template หรือคลิก",
+        hint1: "ใช้ {{Tag}} ในไฟล์ template ให้ตรงกับชื่อ column ใน CSV",
+        step2: "2) เลือกไฟล์ข้อมูล (.csv)",
+        dragCsv: "ลากไฟล์ CSV หรือคลิก",
+        hint2: "ต้องมี header แถวแรก เช่น Name, Date",
+        step3: "3) เลือกประเภท Output",
+        btnGenerate: "⚡ สร้างเอกสาร",
+        btnProcessing: "กำลังทำงาน...",
+        tipLabel: "Tip:",
+        tipText: "Column แรกของ CSV จะถูกใช้เป็นชื่อไฟล์เสมอ (เช่น 01_Somchai)",
+        resultTitle: "📄 ผลลัพธ์",
+        resultEmpty: "ผลลัพธ์จะแสดงที่นี่หลังจาก Generate",
+        errorTitle: "เกิดข้อผิดพลาด",
+        btnClose: "ปิด",
+        downloadAll: "ดาวน์โหลดทั้งหมด (.zip)",
+        generated: "สร้างไฟล์สำเร็จ",
+        files: "ไฟล์",
+        progressStart: "กำลังเริ่มต้น...",
+        progressWork: "กำลังสร้างเอกสาร..."
+      },
+      en: {
+        appTitle: "EasyCert by Portalnet",
+        appSubtitle: "Online Certificate Generator",
+        step1: "1) Upload Template (.docx / .pptx)",
+        dragTemplate: "Drag & Drop Template or Click",
+        hint1: "Use {{Tag}} in template matching CSV column headers",
+        step2: "2) Upload Data (.csv)",
+        dragCsv: "Drag & Drop CSV or Click",
+        hint2: "First row must contain headers e.g. Name, Date",
+        step3: "3) Select Output Type",
+        btnGenerate: "⚡ Generate Documents",
+        btnProcessing: "Processing...",
+        tipLabel: "Tip:",
+        tipText: "The first column of CSV will be used as the filename (e.g. 01_Name)",
+        resultTitle: "📄 Results",
+        resultEmpty: "Results will appear here after generation",
+        errorTitle: "Error Occurred",
+        btnClose: "Close",
+        downloadAll: "Download All (.zip)",
+        generated: "Generated",
+        files: "files",
+        progressStart: "Starting...",
+        progressWork: "Generating documents..."
+      }
+    };
+
+    let currentLang = 'th'; // Default language
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      const t = translations[lang];
+
+      // Update Text Content
+      document.getElementById('t-app-title').textContent = t.appTitle;
+      document.getElementById('t-app-subtitle').textContent = t.appSubtitle;
+      document.getElementById('t-step1').textContent = t.step1;
+      document.getElementById('t-drag-template').textContent = t.dragTemplate;
+      document.getElementById('t-hint1').textContent = t.hint1;
+      document.getElementById('t-step2').textContent = t.step2;
+      document.getElementById('t-drag-csv').textContent = t.dragCsv;
+      document.getElementById('t-hint2').textContent = t.hint2;
+      document.getElementById('t-step3').textContent = t.step3;
+      document.getElementById('submitBtn').textContent = submitBtn.disabled ? t.btnProcessing : t.btnGenerate;
+      document.getElementById('t-tip-label').textContent = t.tipLabel;
+      document.getElementById('t-tip-text').textContent = t.tipText;
+      document.getElementById('t-result-title').textContent = t.resultTitle;
+      document.getElementById('t-result-empty').textContent = t.resultEmpty;
+      document.getElementById('t-error-title').textContent = t.errorTitle;
+      document.getElementById('t-error-close').textContent = t.btnClose;
+
+      // Update Buttons State
+      document.getElementById('btn-th').classList.toggle('active', lang === 'th');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    }
+
+    /* --- Logic เดิมทั้งหมด --- */
+    function setupDragDrop(zoneId, inputId, contentId, successId, nameId) {
+      const zone = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+      const content = document.getElementById(contentId);
+      const success = document.getElementById(successId);
+      const nameLabel = document.getElementById(nameId);
+
+      zone.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => { if(input.files.length) updateUI(input.files[0]); });
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault(); zone.classList.remove('dragover');
+        if(e.dataTransfer.files.length) { input.files = e.dataTransfer.files; updateUI(e.dataTransfer.files[0]); }
+      });
+      function updateUI(file) {
+        content.style.display = 'none'; success.style.display = 'flex';
+        nameLabel.textContent = file.name; zone.classList.add('has-file');
+      }
+    }
+    setupDragDrop('dropZoneTemplate', 'fileTemplate', 'contentTemplate', 'successTemplate', 'nameTemplate');
+    setupDragDrop('dropZoneCsv', 'fileCsv', 'contentCsv', 'successCsv', 'nameCsv');
+
+    function getFileIcon(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      if (ext === 'pdf') return `<div class="file-icon-box" style="background: #fee2e2; color: #ef4444;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>`;
+      if (ext === 'docx' || ext === 'doc') return `<div class="file-icon-box" style="background: #dbeafe; color: #2563eb;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline><text x="8" y="19" font-size="6" font-weight="bold" fill="currentColor" stroke="none">W</text></svg></div>`;
+      if (ext === 'pptx' || ext === 'ppt') return `<div class="file-icon-box" style="background: #ffedd5; color: #f97316;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><rect x="8" y="13" width="8" height="6" rx="1" stroke="currentColor"></rect><line x1="8" y1="13" x2="16" y2="13"></line><text x="9" y="17.5" font-size="4" font-weight="bold" fill="currentColor" stroke="none">P</text></svg></div>`;
+      if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return `<div class="file-icon-box" style="background: #dcfce7; color: #16a34a;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>`;
+      return `<div class="file-icon-box" style="background: #f3f4f6; color: #6b7280;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>`;
+    }
+
+    const form = document.getElementById("mergeForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const resultContent = document.getElementById("resultContent");
+    const downloadAllContainer = document.getElementById("downloadAllContainer");
+    let progressInterval = null;
+
+    function openError(msg) {
+      document.getElementById("errorMessage").textContent = msg;
+      document.getElementById("errorOverlay").classList.add("visible");
+    }
+    function closeError() {
+      document.getElementById("errorOverlay").classList.remove("visible");
+    }
+    function updateProgressBar(percent) {
+        const fill = document.getElementById('progressFill');
+        const text = document.getElementById('progressText');
+        if(fill && text) {
+            const t = translations[currentLang];
+            fill.style.width = percent + '%';
+            text.textContent = `${t.progressWork} ${percent}%`;
+        }
+    }
+
+    window.markAsDownloaded = function(btn) {
+      btn.classList.add('downloaded');
+      btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    }
+
+    function showLoading() {
+      const t = translations[currentLang];
+      downloadAllContainer.innerHTML = '';
+      resultContent.innerHTML = `
+        <div class="loading-container">
+            <div class="progress-wrapper">
+                <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+                <div id="progressText" class="progress-text">${t.progressStart} 0%</div>
+            </div>
+            <div style="width: 100%; max-width: 400px; margin-top: 10px;">
+                <div class="skeleton-bar" style="width: 100%"></div>
+                <div class="skeleton-bar" style="width: 90%"></div>
+            </div>
+        </div>
+      `;
+      let percent = 0; updateProgressBar(0);
+      if(progressInterval) clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+          if (percent < 60) percent += Math.floor(Math.random() * 5) + 1;
+          else if (percent < 90) percent += 1;
+          if (percent > 90) percent = 90; 
+          updateProgressBar(percent);
+      }, 300);
+    }
+
+    function showResults(label, files, zipBase64) {
+      if(progressInterval) clearInterval(progressInterval);
+      updateProgressBar(100);
+
+      setTimeout(() => {
+          const t = translations[currentLang];
+          downloadAllContainer.innerHTML = `
+            <a href="data:application/zip;base64,${zipBase64}" download="all-files.zip" class="btn-download-all-header">
+              ${t.downloadAll}
+            </a>
+          `;
+
+          let listHtml = `<div class="result-summary">${t.generated} ${files.length} ${t.files} (${label})</div>`;
+          listHtml += `<div class="file-list">`;
+          
+          files.forEach(f => {
+            const fileIconHtml = getFileIcon(f.filename);
+            const downloadIconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+
+            listHtml += `
+              <div class="file-item">
+                <div class="file-info">
+                  ${fileIconHtml}
+                  <span class="file-name-text">${f.filename}</span>
+                </div>
+                <a href="data:${f.mime};base64,${f.base64}" download="${f.filename}" 
+                   class="btn-icon-download" title="Download" onclick="markAsDownloaded(this)">
+                  ${downloadIconSvg}
+                </a>
+              </div>
+            `;
+          });
+          listHtml += `</div>`;
+          resultContent.innerHTML = listHtml;
+      }, 500);
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      const t = translations[currentLang];
+      
+      submitBtn.disabled = true; 
+      submitBtn.textContent = t.btnProcessing; 
+      showLoading();
+
+      try {
+        const fd = new FormData(form);
+        const res = await fetch("/merge", { method: "POST", body: fd });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || !data.success) throw new Error(data?.message || "Unknown Error");
+        showResults(data.label, data.files, data.zipBase64);
+      } catch (err) {
+        if(progressInterval) clearInterval(progressInterval);
+        resultContent.innerHTML = `<div class="empty-state"><div class="empty-icon" style="color:red">!</div><p>${err.message}</p></div>`;
+        openError(err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = t.btnGenerate; // Reset text using current lang
+      }
+    });
+
+    // เริ่มต้นให้เป็นภาษาไทย
+    setLanguage('th');
+  </script>
+</body>
+</html>
