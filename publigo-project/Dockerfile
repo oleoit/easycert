@@ -1,11 +1,11 @@
 # ใช้ Node.js v20 บน Linux
 FROM node:20-slim
 
-# 1. ติดตั้ง LibreOffice และฟอนต์ภาษาไทย (สำคัญมาก ไม่งั้นภาษาไทยจะเป็นสี่เหลี่ยม)
+# 1. ติดตั้ง LibreOffice และฟอนต์ภาษาไทย
+# (ลบ fonts-google-license ออก เพื่อแก้ Error)
 RUN apt-get update && apt-get install -y \
     libreoffice \
     fonts-thai-tlwg \
-    fonts-google-license \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. ตั้งค่าโฟลเดอร์ทำงาน
