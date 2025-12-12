@@ -62,16 +62,19 @@ body {
 }
 
 .logo-badge {
-  background: var(--primary);
-  color: white;
+/* ถ้าโลโก้คุณพื้นหลังใสและอยากได้พื้นหลังสีม่วง ให้คงบรรทัด background ไว้ */
+  /* ถ้าโลโก้มีพื้นหลังแล้ว ให้ลบ background: var(--primary); ออก หรือเปลี่ยนเป็น transparent */
+  background: transparent; 
+  
   width: 42px;
   height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 20px;
+  
+  /* ลบ color, font-size, font-weight เดิมออก เพราะเราใช้รูปภาพแล้ว */
+  /* border-radius: 10px; เก็บไว้ถ้าอยากให้รูปโค้งมน หรือลบออกถ้าอยากได้รูปสี่เหลี่ยมเป๊ะๆ */
+  border-radius: 8px; 
+  
+  /* เพิ่มส่วนนี้เพื่อให้รูปภาพย่อขยายพอดีกรอบ */
+  object-fit: contain; 
   flex-shrink: 0;
 }
 
