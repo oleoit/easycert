@@ -1,25 +1,26 @@
-# ใช้ Node.js v20 บน Linux
-FROM node:20-slim
+# 1. ใช้ Node.js เวอร์ชันที่มี Linux พื้นฐานครบ (สำคัญมาก ห้ามใช้ Alpine)
+FROM node:18-bullseye
 
-# 1. ติดตั้ง LibreOffice และฟอนต์ภาษาไทย
-# (ลบ fonts-google-license ออก เพื่อแก้ Error)
+# 2. ติดตั้ง LibreOffice และฟอนต์ภาษาไทย
 RUN apt-get update && apt-get install -y \
     libreoffice \
     fonts-thai-tlwg \
+    fonts-sarabun \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. ตั้งค่าโฟลเดอร์ทำงาน
+# 3. กำหนดโฟลเดอร์ทำงาน
 WORKDIR /app
 
-# 3. Copy ไฟล์สเปคและติดตั้งแพ็กเกจ
+# 4. ก๊อปปี้ไฟล์ package.json และติดตั้ง dependency
 COPY package*.json ./
 RUN npm install
 
-# 4. Copy โค้ดทั้งหมดลงไป
+# 5. ก๊อปปี้ไฟล์ทั้งหมดในโปรเจกต์
 COPY . .
 
-# 5. เปิด Port 3000
-EXPOSE 3000
+# 6. เปิด Port (Koyeb จะอ่าน Port จาก ENV หรือใช้ 8000)
+ENV PORT=8000
+EXPOSE 8000
 
-# 6. สั่งรัน Server
+# 7. คำสั่งรัน Server
 CMD ["node", "server.js"]
