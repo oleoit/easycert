@@ -1,4 +1,4 @@
-/* server.js - Updated with Error Codes */
+/* server.js - Updated for Cloud Deployment (Koyeb/Render) */
 const express = require("express");
 const multer = require("multer");
 const PizZip = require("pizzip");
@@ -74,7 +74,9 @@ async function convertPdfToImages(pdfBuffer, format = "png") {
 }
 
 const app = express();
-const port = 3000;
+
+// --- แก้ไขจุดที่ 1: ใช้ Port จาก Environment Variable ---
+const port = process.env.PORT || 8000; 
 
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
@@ -219,4 +221,7 @@ app.post("/merge", upload.fields([{ name: "template" }, { name: "datafile" }]), 
   }
 });
 
-app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+// --- แก้ไขจุดที่ 2: เพิ่ม '0.0.0.0' เพื่อให้เข้าถึงได้จากภายนอก ---
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${port}`);
+});
